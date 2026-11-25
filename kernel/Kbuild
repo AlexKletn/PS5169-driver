@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: GPL-2.0-only
+
+obj-m := ps5169.o
+ps5169-y := module.o
+
+RUSTFLAGS_REMOVE_module.o := --edition=2021
+RUSTFLAGS_module.o := --edition=2024
+
+profile-generator := $(src)/../profiles/generate_profile.py
+export OUT_DIR := $(abspath $(obj))
+
+define filechk_ps5169_profile
+	$(if $(strip $(PS5169_PROFILE)), \
+		python3 "$(profile-generator)" "$(abspath $(PS5169_PROFILE))" /dev/stdout, \
+		printf '%s\n' "pub const SELECTED_SEQUENCES: Option<RegisterSequences<&'static [u8]>> = None;")
+endef
+
+$(obj)/ps5169_profile.rs: $(profile-generator) FORCE
+	$(call filechk,ps5169_profile)
+
+$(obj)/module.o: $(obj)/ps5169_profile.rs
+targets += ps5169_profile.rs
